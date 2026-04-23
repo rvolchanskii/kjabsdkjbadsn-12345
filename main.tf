@@ -12,7 +12,7 @@ module "s3" {
 module "acm" {
   for_each = local.certificate_domains
 
-  source = "../terraform/shared_modules/acm-validated"
+  source = "./modules/acm-validated"
 
   domain_name               = each.value.domain
   subject_alternative_names = []
