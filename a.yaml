@@ -1,0 +1,135 @@
+service: experimental_projects_team
+title: AWS deployment config for Yango (CDN)
+arcanum:
+    review:
+        auto_assign: false
+        disabling_policy: denied
+        groups:
+          - name: reviewers
+            roles: ["@scope=administration"]
+        rules:
+          - reviewers:
+            - name: reviewers
+              assign: 0
+              ship: 1
+
+ci:
+  permissions:
+    start-flow:
+      - service: experimental_projects_team
+        scope: administration
+      - service: vopstaxi
+        scope: administration
+  on-demand-auto:
+    - abs-paths: taxi/yango/aws-taxi-cdn/**
+
+  secret: sec-01jwe6ap1j949h6xft66rqj86b
+  runtime:
+    sandbox:
+      owner: TAXI-WORLD
+    tasklet:
+      account_name: /root/generic/quotastaxiinternational
+      requirements:
+        container:
+          network:
+            name: _TASKLETS_SERVICE_TAXI_WORLD_NETS_
+
+  releases:
+    apply-terraform:
+      title: Apply aws-taxi-cdn terraform
+      flow: apply-terraform-flow
+      filters:
+        - sub-paths: ['**']
+        - abs-paths:
+          - taxi/yango/terraform/shared_modules/acm-validated/**
+      link-to-tracker-issues:
+        queues:
+          - YANGOCLOUD
+          - TAXIADMIN
+
+  actions:
+    plan-terraform:
+      title: Plan aws-taxi-cdn terraform
+      flow: plan-terraform-flow
+      triggers:
+        - on: pr
+          on-demand: true
+          required: always
+          filters:
+            - sub-paths: ['**']
+            - abs-paths:
+              - taxi/yango/terraform/shared_modules/acm-validated/**
+
+  flows:
+    plan-terraform-flow:
+      title: Plan aws-taxi-cdn terraform
+      jobs:
+        plan: &plan
+          title: Plan
+          task: projects/taxi/world/terraform_plan
+          input:
+            arc_token:
+              id: sec-01jwe6ap1j949h6xft66rqj86b
+              key: arc.token
+            config:
+              working_dir: taxi/yango/aws-taxi-cdn
+              provider_cache_sbr: 10013096372
+              variables: {}
+              environment:
+                AWS_ACCESS_KEY_ID:
+                  id: sec-01k7pmkctp95pwa2skrx2p7fdf
+                  key: aws.key_id
+                AWS_SECRET_ACCESS_KEY:
+                  id: sec-01k7pmkctp95pwa2skrx2p7fdf
+                  key: aws.secret
+                AWS_REGION:
+                  id: sec-01k7pmkctp95pwa2skrx2p7fdf
+                  key: aws.region
+                DNSCLIENT_TOKEN:
+                  id: sec-01jwe6ap1j949h6xft66rqj86b
+                  key: dnsclient.token
+              expect_empty_diff: false
+    apply-terraform-flow:
+      title: Apply aws-taxi-cdn terraform
+      jobs:
+        plan: *plan
+        apply:
+          title: Apply
+          task: projects/taxi/world/terraform_apply
+          needs: plan
+          if: ${tasks.plan.plan_sbr}
+          manual: true
+          input:
+            plan_sbr: ${tasks.plan.plan_sbr}
+            arc_token:
+              id: sec-01jwe6ap1j949h6xft66rqj86b
+              key: arc.token
+            config:
+              working_dir: taxi/yango/aws-taxi-cdn
+              provider_cache_sbr: 10013096372
+              variables: {}
+              environment:
+                AWS_ACCESS_KEY_ID:
+                  id: sec-01k7pmkctp95pwa2skrx2p7fdf
+                  key: aws.key_id
+                AWS_SECRET_ACCESS_KEY:
+                  id: sec-01k7pmkctp95pwa2skrx2p7fdf
+                  key: aws.secret
+                AWS_REGION:
+                  id: sec-01k7pmkctp95pwa2skrx2p7fdf
+                  key: aws.region
+                DNSCLIENT_TOKEN:
+                  id: sec-01jwe6ap1j949h6xft66rqj86b
+                  key: dnsclient.token
+        zerodiff:
+          title: Zerodiff
+          task: dummy
+          needs: plan
+          if: ${!tasks.plan.plan_sbr}
+        finish:
+          title: Finish
+          task: dummy
+          needs:
+            - apply
+            - zerodiff
+          needs-type: any-success

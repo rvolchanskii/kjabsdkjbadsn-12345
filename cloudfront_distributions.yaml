@@ -1,0 +1,672 @@
+anchors:
+  static_training_behavior: &static_training_behavior
+    allowed_methods: ["GET","HEAD","OPTIONS"]
+    cached_methods: ["GET","HEAD","OPTIONS"]
+    cache_policy: "CachingStaticIgnoreCacheControl"
+    origin_request_policy: "Managed-AllViewerExceptHostHeader"
+    response_headers_policy: "RemoveNELAndCookiesAndCacheHost"
+  static_training_yandex_js_behavior: &static_training_yandex_js_behavior
+    allowed_methods: ["GET","HEAD","OPTIONS","PUT","POST","PATCH","DELETE"]
+    cached_methods: ["GET","HEAD","OPTIONS"]
+    cache_policy: "UseOriginCacheControlHeadersExceptHost"
+    origin_request_policy: "Managed-AllViewerExceptHostHeader"
+    response_headers_policy: "RemoveNELAndCookiesAndCacheHost"
+  avatar_behavior: &avatar_behavior
+    allowed_methods: ["GET","HEAD"]
+    cached_methods: ["GET","HEAD"]
+    cache_policy: "Managed-CachingOptimized"
+    origin_request_policy: "Managed-AllViewer"
+    response_headers_policy: "RemoveNELAndCacheHost"
+  avatar_behavior_normalize_webp: &avatar_behavior_normalize_webp
+    allowed_methods: ["GET","HEAD"]
+    cached_methods: ["GET","HEAD"]
+    cache_policy: "CachingOptimized-XImageFormat"
+    origin_request_policy: "Managed-AllViewer"
+    response_headers_policy: "RemoveNELAndCacheHost"
+  storage_behavior: &storage_behavior
+    allowed_methods: ["GET","HEAD"]
+    cached_methods: ["GET","HEAD"]
+    cache_policy: "Managed-CachingOptimized"
+    origin_request_policy: "Managed-AllViewer"
+
+  # default cache behavior templates
+  default_cache_behavior_except_host_nel: &default_cache_behavior_except_host_nel
+    cache_policy: "UseOriginCacheControlHeadersExceptHost"
+    origin_request_policy: "Managed-AllViewerExceptHostHeader"
+    response_headers_policy: "RemoveNELAndCacheHost"
+  default_cache_behavior_except_host_nel_and_cookies: &default_cache_behavior_except_host_nel_and_cookies
+    cache_policy: "UseOriginCacheControlHeadersExceptHost"
+    origin_request_policy: "Managed-AllViewerExceptHostHeader"
+    response_headers_policy: "RemoveNELAndCookiesAndCacheHost"
+  default_cache_behavior_use_origin_nel: &default_cache_behavior_use_origin_nel
+    cache_policy: "UseOriginCacheControlHeaders"
+    origin_request_policy: "Managed-AllViewer"
+    response_headers_policy: "RemoveNELAndCacheHost"
+
+distributions:
+  # static.{yango.tech,yandexcom.net, yandexint.net}
+  static:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "static"
+    origin_domain: "yastatic.net"
+    default_root_object: "nonexistent"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel
+      cache_policy: "UseOriginCacheControlHeadersExceptHost-QueryStringsV"
+      response_headers_policy: "RemoveNELAndCacheHost"
+    org_overrides:
+      yango:
+        default_root_object: ""
+
+  # static.training.{yango.tech,yandexcom.net}
+  static_training:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "static.training"
+    origin_domain: "education.training.yandex"
+    additional_origins:
+      - domain_name: "aws-taxi-cdn-cloudfront.s3.eu-central-1.amazonaws.com"
+        origin_id: "aws-taxi-cdn-cloudfront.s3.eu-central-1.amazonaws.com"
+    default_cache_behavior_target_origin_id: "aws-taxi-cdn-cloudfront.s3.eu-central-1.amazonaws.com"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+    ordered_cache_behaviors:
+      - <<: *static_training_behavior
+        path_pattern: "/*.js"
+        target_origin_id: "education.training.yandex"
+      - <<: *static_training_behavior
+        path_pattern: "/*.css"
+        target_origin_id: "education.training.yandex"
+      - <<: *static_training_behavior
+        path_pattern: "/assets/*"
+        target_origin_id: "education.training.yandex"
+    org_overrides:
+      yandex:
+        ordered_cache_behaviors:
+          - <<: *static_training_yandex_js_behavior
+            path_pattern: "/*.js"
+            target_origin_id: "education.training.yandex"
+          - <<: *static_training_behavior
+            path_pattern: "/*.css"
+            target_origin_id: "education.training.yandex"
+          - <<: *static_training_behavior
+            path_pattern: "/assets/*"
+            target_origin_id: "education.training.yandex"
+
+  # Media and Storage Services
+  # avatars.mds.{yango.tech, yandexcom.net}
+  avatars_mds:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "avatars.mds"
+    origin_domain: "avatars.mds.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_use_origin_nel
+    ordered_cache_behaviors:
+      - <<: *avatar_behavior
+        path_pattern: "/*.js"
+        target_origin_id: "avatars.mds.yandex.net"
+      - <<: *avatar_behavior
+        path_pattern: "/*.jpg"
+        target_origin_id: "avatars.mds.yandex.net"
+      - <<: *avatar_behavior
+        path_pattern: "/*.jpeg"
+        target_origin_id: "avatars.mds.yandex.net"
+      - <<: *avatar_behavior
+        path_pattern: "/*.gif"
+        target_origin_id: "avatars.mds.yandex.net"
+      - <<: *avatar_behavior
+        path_pattern: "/*.css"
+        target_origin_id: "avatars.mds.yandex.net"
+      - <<: *avatar_behavior
+        path_pattern: "/*.png"
+        target_origin_id: "avatars.mds.yandex.net"
+    org_overrides:
+      yango:
+        ordered_cache_behaviors:
+          - <<: *avatar_behavior_normalize_webp
+            path_pattern: "/get-yango-marketplace/*"
+            target_origin_id: "avatars.mds.yandex.net"
+            viewer_request_function: "normalize_webp"
+          - <<: *avatar_behavior
+            path_pattern: "/*.css"
+            target_origin_id: "avatars.mds.yandex.net"
+          - <<: *avatar_behavior
+            path_pattern: "/*.jpg"
+            target_origin_id: "avatars.mds.yandex.net"
+          - <<: *avatar_behavior
+            path_pattern: "/*.png"
+            target_origin_id: "avatars.mds.yandex.net"
+          - <<: *avatar_behavior
+            path_pattern: "/*.gif"
+            target_origin_id: "avatars.mds.yandex.net"
+          - <<: *avatar_behavior
+            path_pattern: "/*.jpeg"
+            target_origin_id: "avatars.mds.yandex.net"
+          - <<: *avatar_behavior
+            path_pattern: "/*.js"
+            target_origin_id: "avatars.mds.yandex.net"
+
+  avatars_mds_buy:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    - yandex
+    name: "avatars-buy.mds"
+    origin_domain: "avatars.mds.yandex.net"
+    viewer_request_function: "return_404"
+    default_cache_behavior:
+      <<: *avatar_behavior
+    ordered_cache_behaviors:
+      - <<: *avatar_behavior_normalize_webp
+        path_pattern: "/get-yango-marketplace/*"
+        target_origin_id: "avatars.mds.yandex.net"
+        viewer_request_function: "normalize_webp"
+
+  # storage.mds.{yango.tech, yandexcom.net}
+  storage_mds_yandexcom:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "storage.mds"
+    origin_domain: "storage.mds.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_use_origin_nel
+    ordered_cache_behaviors:
+      - <<: *storage_behavior
+        path_pattern: "/*.js"
+        target_origin_id: "storage.mds.yandex.net"
+      - <<: *storage_behavior
+        path_pattern: "/*.jpg"
+        target_origin_id: "storage.mds.yandex.net"
+      - <<: *storage_behavior
+        path_pattern: "/*.jpeg"
+        target_origin_id: "storage.mds.yandex.net"
+      - <<: *storage_behavior
+        path_pattern: "/*.gif"
+        target_origin_id: "storage.mds.yandex.net"
+      - <<: *storage_behavior
+        path_pattern: "/*.css"
+        target_origin_id: "storage.mds.yandex.net"
+      - <<: *storage_behavior
+        path_pattern: "/*.png"
+        target_origin_id: "storage.mds.yandex.net"
+
+  # avatars.mdst.{yango.tech, yandexcom.net}
+  avatars_mdst_yandexcom:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "avatars.mdst"
+    origin_domain: "avatars.mdst.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+      compress: false
+
+  # avatars.{yango.tech, yandexcom.net}
+  avatars:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "avatars"
+    origin_domain: "avatars.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+      compress: false
+
+  # taxi-promotions.s3.yandexcom.net
+  taxi_promotions_yandexcom:
+    exclude_orgs:
+    - yango
+    - gogettaxi
+    - taxitax
+    name: "taxi-promotions.s3"
+    origin_domain: "taxi-promotions.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel
+
+  # taxi-campaigncms.s3.{yango.tech,yandexcom.net}
+  taxi_campaigncms:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "taxi-campaigncms.s3"
+    origin_domain: "taxi-campaigncms.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # fleet-images.s3.{yango.tech,yandexcom.net}
+  fleet_images:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "fleet-images.s3"
+    origin_domain: "fleet-images.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # cargo-photofixation.s3-private.mds.{yango.tech, yandexcom.net}
+  cargo_photofixation_yandexcom:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "cargo-photofixation.s3-private.mds"
+    origin_domain: "cargo-photofixation.s3-private.mds.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+    default_allowed_methods: ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+
+  # passenger-photos-public.s3-private.mds.{yango.tech, yandexcom.net}
+  passenger_photos_public_yandexcom:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "passenger-photos-public.s3-private.mds"
+    origin_domain: "passenger-photos-public.s3-private.mds.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # logpoint-pro.s3.{yango.tech,yandexcom.net}
+  logpoint_pro_yandexcom:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "logpoint-pro.s3"
+    origin_domain: "logpoint-pro.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # tanker.s3.{yango.tech, yandexcom.net}
+  tanker_yandexcom:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "tanker.s3"
+    origin_domain: "tanker.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # zapravki-static.s3.yandexcom.net
+  zapravki_static_yandexcom:
+    exclude_orgs:
+    - yango
+    - gogettaxi
+    - taxitax
+    name: "zapravki-static.s3"
+    origin_domain: "zapravki-static.s3.yandex.net"
+    default_cache_behavior:
+      cache_policy: "UseOriginCacheControlHeadersExceptHost"
+      origin_request_policy: "Managed-AllViewerExceptHostHeader"
+
+  # taxi-navigator-voices.s3.{yango.tech, yandexcom.net}
+  taxi_navigator_voices_yandexcom:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "taxi-navigator-voices.s3"
+    origin_domain: "taxi-navigator-voices.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # eats.static.{yango.tech ,yandexcom.net, yandexint.net}
+  eats_static_yandexcom:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "eats.static"
+    origin_domain: "eda.yandex.ru"
+    additional_origins:
+      - domain_name: "aws-taxi-cdn-cloudfront.s3.eu-central-1.amazonaws.com"
+        origin_id: "aws-taxi-cdn-cloudfront.s3.eu-central-1.amazonaws.com"
+    default_cache_behavior_target_origin_id: "aws-taxi-cdn-cloudfront.s3.eu-central-1.amazonaws.com"
+    default_cache_behavior:
+      cache_policy: "Managed-CachingOptimized"
+    viewer_request_function: "return_404"
+    ordered_cache_behaviors:
+      - path_pattern: "/images/*"
+        allowed_methods: ["GET", "HEAD", "OPTIONS"]
+        cached_methods: ["GET", "HEAD"]
+        target_origin_id: "eda.yandex.ru"
+        cache_policy: "UseOriginCacheControlHeadersExceptHost"
+        origin_request_policy: "Managed-AllViewerExceptHostHeader"
+        response_headers_policy: "RemoveNELAndCookiesAndCacheHost"
+      - path_pattern: "/files/*"
+        allowed_methods: ["GET", "HEAD", "OPTIONS"]
+        cached_methods: ["GET", "HEAD"]
+        target_origin_id: "eda.yandex.ru"
+        cache_policy: "Managed-CachingOptimized"
+        origin_request_policy: "Managed-AllViewerExceptHostHeader"
+        response_headers_policy: "RemoveNELAndCookiesAndCacheHost"
+        viewer_protocol_policy: "redirect-to-https"
+
+  # cdnruye6nulyhc2bjmix.svc.cdn.{yango.tech, yandexcom.net, yandexint.net}
+  cdn_ruye6:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "cdnruye6nulyhc2bjmix.svc.cdn"
+    origin_domain: "cdnruye6nulyhc2bjmix.svc.cdn.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # cdnriouht4xca5ihmorb.svc.cdn.{yango.tech, yandexcom.net, yandexint.net}
+  cdn_riouht:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "cdnriouht4xca5ihmorb.svc.cdn"
+    origin_domain: "cdnriouht4xca5ihmorb.svc.cdn.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # cdnrhkgfkkpupuotntfj.svc.cdn.yango.tech
+  cdn_rhkgfk:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    - yandex
+    name: "cdnrhkgfkkpupuotntfj.svc.cdn"
+    origin_domain: "cdnrhkgfkkpupuotntfj.svc.cdn.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # s3.mds.{yango.tech, yandexcom.net}
+  s3_mds_yandexcom:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "s3.mds"
+    origin_domain: "s3.mds.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # cdnrmhptp2ngnkqhiwkr.svc.cdn.{yango.tech, yandexcom.net, yandexint.net}
+  cdn_rmhptp_yandexcom:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "cdnrmhptp2ngnkqhiwkr.svc.cdn"
+    origin_domain: "cdnrmhptp2ngnkqhiwkr.svc.cdn.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # cdnh7uqgqhkt3hk3zwcz.svc.cdn.{yango.tech, yandexcom.net, yandexint.net}
+  cdn_h7uqg_yandexcom:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "cdnh7uqgqhkt3hk3zwcz.svc.cdn"
+    origin_domain: "cdnh7uqgqhkt3hk3zwcz.svc.cdn.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+  
+  # cdnrhl6sge5ovr5ywyoz.svc.cdn.{yango.tech, yandexcom.net, yandexint.net}
+  cdn_rhl6s_yandexcom:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "cdnrhl6sge5ovr5ywyoz.svc.cdn"
+    origin_domain: "cdnrhl6sge5ovr5ywyoz.svc.cdn.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # static.taxitax.org
+  static_taxitax:
+    exclude_orgs:
+    - yandex
+    - yango
+    - gogettaxi
+    name: "static"
+    origin_domain: "static.rostaxi.org"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # static.gogettaxi.org
+  static_gogettaxi:
+    exclude_orgs:
+    - yandex
+    - yango
+    - taxitax
+    name: "static"
+    origin_domain: "static.rostaxi.org"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # static.taxi.yango.tech
+  static_taxi:
+    exclude_orgs:
+    - yandex
+    - gogettaxi
+    - taxitax
+    name: "static.taxi"
+    origin_domain: "static.rostaxi.org"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # storage.yandexcloud.yandexcom.net
+  storage_yandexcloud_yandexcom:
+    exclude_orgs:
+    - yango
+    - gogettaxi
+    - taxitax
+    name: "storage.yandexcloud"
+    origin_domain: "storage.yandexcloud.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # dynamic-documents.s3.{yango.tech,yandexcom.net}
+  dynamic-documents_s3:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "dynamic-documents.s3"
+    origin_domain: "dynamic-documents.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # samsara.s3.{yango.tech,yandexcom.net}
+  samsara_s3:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "samsara.s3"
+    origin_domain: "samsara.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # uxfeedback-cdn.s3.{yango.tech,yandexcom.net}
+  uxfeedback-cdn_s3:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "uxfeedback-cdn.s3"
+    origin_domain: "uxfeedback-cdn.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # abt.s3.{yango.tech,yandexcom.net}
+  abt_s3:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "abt.s3"
+    origin_domain: "abt.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # taxi-mvp.s3.{yango.tech,yandexcom.net}
+  taxi-mvp_s3:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "taxi-mvp.s3"
+    origin_domain: "taxi-mvp.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # core-report-renderer-prod.storage.{yango.tech,yandexcom.net}
+  core-report-renderer-prod_storage:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "core-report-renderer-prod.storage"
+    origin_domain: "core-report-renderer-prod.storage.yandexcloud.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # fintech-frontend.s3.{yango.tech,yandexcom.net}
+  fintech-frontend_s3:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "fintech-frontend.s3"
+    origin_domain: "fintech-frontend.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # fleet-reports-storage.s3-private.{yango.tech,yandexcom.net}
+  fleet-reports-storage_s3-private:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "fleet-reports-storage.s3-private"
+    origin_domain: "fleet-reports-storage.s3-private.mds.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # superweb-fleet-static.s3.yandex.net{yango.tech}
+  superweb-fleet-static:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "superweb-fleet-static.s3"
+    origin_domain: "superweb-fleet.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+  
+  # superweb-fleet-forms.s3.{yandexcom.net,yango.tech}
+  superweb-fleet-forms-static:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "superweb-fleet-forms.s3"
+    origin_domain: "superweb-fleet-forms.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # courier-admin.s3.{yango.tech,yandexcom.net}
+  courier-admin_s3:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "courier-admin.s3"
+    origin_domain: "courier-admin.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # b2bgeo-analytics.s3-private.{yango.tech,yandexcom.net}
+  b2bgeo-analytics_s3-private:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "b2bgeo-analytics.s3-private"
+    origin_domain: "b2bgeo-analytics.s3-private.mds.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # yabank-docs-prod.storage.yandexcom.net
+  yabank-docs-prod_storage:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    - yango
+    name: "yabank-docs-prod.storage"
+    origin_domain: "yabank-docs-prod.storage.yandexcloud.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # driversupport.s3.{yango.tech,yandexcom.net}
+  driversupport_s3:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "driversupport.s3"
+    origin_domain: "driversupport.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # lavka-b2b-support-chat-prod.s3.yango.tech
+  lavka-b2b-support-chat-prod_s3:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    - yandex
+    name: "lavka-b2b-support-chat-prod.s3"
+    origin_domain: "lavka-b2b-support-chat-prod.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # ydt-stable-admin-panel-static.s3.yango.tech
+  ydt-stable-admin-panel-static_s3:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    - yandex
+    name: "ydt-stable-admin-panel-static.s3"
+    origin_domain: "ydt-stable-admin-panel-static.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  # eats-hiring-partners-app-production.s3.{yango.tech,yandexcom.net}
+  eats-hiring-partners-app-production:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    name: "eats-hiring-partners-app-production.s3"
+    origin_domain: "eats-hiring-partners-app-production.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  ydt-stable-b2b-support-chat-chat-attachments:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    - yandex
+    name: "ydt-stable-b2b-support-chat-chat-attachments.s3"
+    origin_domain: "ydt-stable-b2b-support-chat-chat-attachments.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  ydt-stable-console-static_s3:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    - yandex
+    name: "ydt-stable-console-static.s3.mds"
+    origin_domain: "ydt-stable-console-static.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  ydt-stable-admin-panel-communications_s3:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    - yandex
+    name: "ydt-stable-admin-panel-communications.s3"
+    origin_domain: "ydt-stable-admin-panel-communications.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies
+
+  ydt-stable-admin-panel-discounts_s3:
+    exclude_orgs:
+    - gogettaxi
+    - taxitax
+    - yandex
+    name: "ydt-stable-admin-panel-discounts.s3"
+    origin_domain: "ydt-stable-admin-panel-discounts.s3.yandex.net"
+    default_cache_behavior:
+      <<: *default_cache_behavior_except_host_nel_and_cookies

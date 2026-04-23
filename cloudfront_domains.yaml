@@ -1,0 +1,15 @@
+organizations:
+  yango:
+    domains:
+    - yango.tech
+  yandex:
+    domains:
+    - yandexcom.net
+    - yandexint.net
+    - ridehailing.net
+  gogettaxi:
+    domains:
+    - gogettaxi.org
+  taxitax:
+    domains:
+    - taxitax.org
